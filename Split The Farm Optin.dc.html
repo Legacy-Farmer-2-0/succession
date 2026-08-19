@@ -16,7 +16,12 @@
   body { margin: 0; background: #0C0F0E; }
   a { color: #9BD630; text-decoration: underline; text-underline-offset: 3px; }
   a:hover { color: #B5E85F; }
-  /* HubSpot form styling — dark theme to match the page */
+  /* HubSpot form styling — dark theme to match the page.
+     NOTE: this portal's embed (js.hsforms.net/forms/embed/v2.js) renders
+     the form inside a sandboxed <iframe> (.hs-form-frame), so these rules
+     only reach it if HubSpot falls back to a raw, non-iframe embed. For
+     the iframe case, set the dark styling inside HubSpot itself:
+     Marketing > Forms > (this form) > Style & preview. */
   .hs-form-frame,
   .hbspt-form { font-family: Inter, 'Helvetica Neue', Arial, sans-serif; }
   .hbspt-form label { font-weight: 600; font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: #929B93; }
@@ -33,6 +38,7 @@
   .hbspt-form .legal-consent-container,
   .hbspt-form .hs-richtext { font-size: 13px; line-height: 1.5; color: #6F786F; }
   .hbspt-form ::placeholder { color: #6F786F; }
+  #hubspot-form-target .hs-form-frame { min-height: 320px; }
 </style>
 </helmet>
 
@@ -123,23 +129,12 @@
             </div>
 
             <!--
-              ============================================================
-              HUBSPOT FORM EMBED GOES HERE.
-
-              Paste the full embed snippet HubSpot gives you (the
-              <script src="https://js.hsforms.net/forms/embed/...">
-              plus its hbspt.forms.create({...}) call, or the newer
-              <div class="hs-form-frame" data-region="..." data-form-id="..."
-              data-portal-id="..."></div> + loader script) directly in place
-              of the <div id="hubspot-form-target"> below, or inside it —
-              either works.
-
-              Once the real HubSpot form is in place, this page already
-              listens for HubSpot's onFormSubmitted postMessage event (see
-              the <script> at the bottom of this file) and will
-              automatically flip to the "You're in" success view below —
-              no other wiring needed.
-              ============================================================
+              HubSpot form (portalId 43573758 / formId 3bd92e18-1b6f-4522-a7f3-83cfba8e4d1b)
+              is injected into this div by the openModal()/_mountHubspotForm()
+              logic below — see the <script> at the bottom of this file.
+              (Raw <script> tags dropped directly into this template don't
+              reliably execute since this page renders through React, so the
+              embed is loaded imperatively instead of pasted in as markup.)
             -->
             <div id="hubspot-form-target"></div>
 
@@ -160,13 +155,59 @@
 
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:480,&quot;height&quot;:1100},&quot;logoUrl&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Logo&quot;},&quot;logoHeight&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:26,&quot;min&quot;:16,&quot;max&quot;:56,&quot;step&quot;:1,&quot;unit&quot;:&quot;px&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Logo&quot;},&quot;footerLogoHeight&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:26,&quot;min&quot;:16,&quot;max&quot;:64,&quot;step&quot;:1,&quot;unit&quot;:&quot;px&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Logo&quot;}}">
+const HUBSPOT_FORM = {
+  portalId: '43573758',
+  formId: '3bd92e18-1b6f-4522-a7f3-83cfba8e4d1b',
+  region: 'na1'
+};
+
 class Component extends DCLogic {
   state = { modalOpen: false, submitted: false };
+
+  // Loads HubSpot's forms loader script once (cached on window so a
+  // reopened modal, or a hot-swapped logic instance, doesn't add it twice).
+  _ensureHubspotScript() {
+    if (window.hbspt && window.hbspt.forms) return Promise.resolve();
+    if (window.__hsFormsLoading) return window.__hsFormsLoading;
+    window.__hsFormsLoading = new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[src*="js.hsforms.net/forms/embed/v2.js"]');
+      if (existing) {
+        existing.addEventListener('load', resolve);
+        existing.addEventListener('error', () => reject(new Error('HubSpot forms script failed to load')));
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = '//js.hsforms.net/forms/embed/v2.js';
+      s.charset = 'utf-8';
+      s.onload = resolve;
+      s.onerror = () => reject(new Error('HubSpot forms script failed to load'));
+      document.body.appendChild(s);
+    });
+    return window.__hsFormsLoading;
+  }
+
+  // Renders the real HubSpot form into #hubspot-form-target. Called each
+  // time the modal opens, since that div is a fresh, empty node every time
+  // (the modal's contents unmount when closed).
+  _mountHubspotForm() {
+    const target = document.getElementById('hubspot-form-target');
+    if (!target) return;
+    this._ensureHubspotScript()
+      .then(() => {
+        if (!document.getElementById('hubspot-form-target')) return; // modal closed again before this resolved
+        window.hbspt.forms.create({
+          ...HUBSPOT_FORM,
+          target: '#hubspot-form-target',
+          onFormSubmitted: () => this.setState({ submitted: true })
+        });
+      })
+      .catch((e) => console.error('[hubspot]', e));
+  }
+
   componentDidMount() {
-    // Once the HubSpot embed above is live, HubSpot posts a
-    // window "message" event when its form is submitted. Catch it
-    // here so the modal flips to the "You're in" view automatically —
-    // no extra wiring needed once the snippet is pasted in.
+    // Belt-and-suspenders: some HubSpot embed configurations only signal
+    // submission via this postMessage event rather than onFormSubmitted
+    // above. Either path lands on the same "submitted" state.
     this._onHsMessage = (event) => {
       if (event && event.data && event.data.type === 'hsFormCallback' && event.data.eventName === 'onFormSubmitted') {
         this.setState({ submitted: true });
@@ -174,9 +215,11 @@ class Component extends DCLogic {
     };
     window.addEventListener('message', this._onHsMessage);
   }
+
   componentWillUnmount() {
     if (this._onHsMessage) window.removeEventListener('message', this._onHsMessage);
   }
+
   renderVals() {
     const s = this.state;
     const logoUrl = (this.props.logoUrl ?? '').trim();
@@ -186,11 +229,10 @@ class Component extends DCLogic {
       headerLogoImg: logoUrl ? React.createElement('img', { src: logoUrl, alt: 'Legacy Farmer', style: { height: (this.props.logoHeight ?? 26) + 'px', width: 'auto', display: 'block', objectFit: 'contain' } }) : null,
       footerLogoImg: logoUrl ? React.createElement('img', { src: logoUrl, alt: 'Legacy Farmer', style: { height: (this.props.footerLogoHeight ?? 26) + 'px', width: 'auto', display: 'block', objectFit: 'contain' } }) : null,
       modalOpen: s.modalOpen,
-      openModal: () => this.setState({ modalOpen: true }),
+      openModal: () => this.setState({ modalOpen: true, submitted: false }, () => this._mountHubspotForm()),
       closeModal: () => this.setState({ modalOpen: false, submitted: false }),
       submitted: s.submitted,
-      notSubmitted: !s.submitted,
-      submit: () => this.setState({ submitted: true })
+      notSubmitted: !s.submitted
     };
   }
 }
