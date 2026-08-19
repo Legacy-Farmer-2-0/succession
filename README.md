@@ -13,26 +13,22 @@ loads React/ReactDOM from a CDN at page-load and hydrates the `<x-dc>` component
 - `image-slot.js` / `support.js` — the Claude Design runtime the page depends on.
 - `assets/` — brand assets (logo, etc).
 
-## ⚠️ Two things still need to be dropped in
+## The HubSpot form
 
-**1. The HubSpot form.** The modal ("Enter Your Info To Watch The Training") has a placeholder
-`<div id="hubspot-form-target">` waiting for the real embed. Open
-`Split The Farm Optin.dc.html`, find the `HUBSPOT FORM EMBED GOES HERE` comment, and paste the
-embed snippet HubSpot gives you (the `<script>` + `hbspt.forms.create({...})` call, or the newer
-`<div class="hs-form-frame" ...>` + loader script) right there — either replacing that div or
-dropping the snippet inside it.
+The modal ("Enter Your Info To Watch The Training") loads a real HubSpot form — portal `43573758`,
+form `3bd92e18-1b6f-4522-a7f3-83cfba8e4d1b`. It's injected imperatively from `openModal()` /
+`_mountHubspotForm()` in the `<script type="text/x-dc">` block at the bottom of
+`Split The Farm Optin.dc.html`, targeting `#hubspot-form-target`, rather than pasted into the
+template as raw `<script>` tags — those don't reliably execute once rendered through this page's
+React-based runtime. It renders inside HubSpot's own sandboxed iframe, so styling it to match the
+page's dark theme happens in HubSpot itself (Marketing → Forms → this form → Style & preview), not
+in this file's CSS.
 
-The page already listens for HubSpot's `onFormSubmitted` postMessage event and will automatically
-flip the modal to the "You're in" success view once the real form submits — no extra wiring needed.
+The page listens for HubSpot's `onFormSubmitted` callback (with a `postMessage` listener kept as a
+fallback) and flips to the "You're in" success view only once the form actually submits.
 
-**2. Two binary assets.** The Claude Design API this was pulled from caps individual file reads at
-~256 KB, which is too small for the Inter webfont files and the full-resolution logo PNG. The page
-falls back gracefully without them (system sans-serif instead of Inter, no logo image), but for a
-pixel-perfect match, copy these in from the original Claude Design project:
-
-- `assets/legacy-farmer-logo.png`
-- `_ds/software-legacy-farmer-design-system-v2-b0e1703c-9f94-4b37-a392-3e409d3a3459/fonts/inter-latin*.woff2`
-  (the `400`, `500`, `600`, `700` weights, both `latin` and `latin-ext` variants — 8 files)
+To swap in a different form, change the `HUBSPOT_FORM` constant (`portalId` / `formId` / `region`)
+near the top of that script block.
 
 ## Local preview
 
