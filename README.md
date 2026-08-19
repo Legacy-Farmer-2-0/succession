@@ -14,6 +14,9 @@ loads React/ReactDOM from a CDN at page-load and hydrates the `<x-dc>` component
   CTA. The `TALK WITH AN AG EXPERT [FREE]` button is still a `href="#"` placeholder.
 - `_ds/.../` — the shared design-system bundle (fonts, base styles) both pages import.
 - `image-slot.js` / `support.js` — the Claude Design runtime both pages depend on.
+- `tracking.js` — site-wide tracking (Meta Pixel, Cometly), loaded via a single
+  `<script src="./tracking.js">` in the `<head>` of every page. Keep pixel IDs / tracking snippets
+  here rather than pasting them into each page — add a new page by referencing this same file.
 - `assets/` — brand assets (logo, etc).
 
 ## The HubSpot form
