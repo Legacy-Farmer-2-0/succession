@@ -9,8 +9,11 @@ loads React/ReactDOM from a CDN at page-load and hydrates the `<x-dc>` component
 ## Structure
 
 - `Split The Farm Optin.dc.html` — the opt-in landing page (served at `/` via `vercel.json`).
-- `_ds/.../` — the shared design-system bundle (fonts, base styles) this page imports.
-- `image-slot.js` / `support.js` — the Claude Design runtime the page depends on.
+- `Split The Farm Watch.dc.html` — the VSL page the opt-in's "You're in" success view links to
+  once the HubSpot form submits. Static (no interactive state) — just the video-slot embed and a
+  CTA. The `TALK WITH AN AG EXPERT [FREE]` button is still a `href="#"` placeholder.
+- `_ds/.../` — the shared design-system bundle (fonts, base styles) both pages import.
+- `image-slot.js` / `support.js` — the Claude Design runtime both pages depend on.
 - `assets/` — brand assets (logo, etc).
 
 ## The HubSpot form
