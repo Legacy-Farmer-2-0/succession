@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/Split The Farm Optin.dc.html" }
+  ]
+}
