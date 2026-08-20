@@ -62,6 +62,12 @@ HOSTED_OVERRIDES = {
         "tracking.js": f"{HS_BASE}/tracking.js",
         "logo": f"{HS_BASE}/legacy-farmer-logo.png",
     },
+    "Split The Farm Watch.dc.html": {
+        "support.js": f"{HS_BASE}/support.js",
+        "image-slot.js": f"{HS_BASE}/image-slot.js",
+        "tracking.js": f"{HS_BASE}/tracking.js",
+        "logo": f"{HS_BASE}/legacy-farmer-logo.png",
+    },
 }
 
 
