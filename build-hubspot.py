@@ -140,6 +140,19 @@ def main():
         )
         html = html.replace('src="assets/legacy-farmer-logo.png"', f'src="{logo_url}"')
 
+        # HubSpot serves Design Manager .html files as "HTML + HubL" —
+        # HubL (its server-side templating language) ALSO uses {{ ... }}
+        # syntax, identical to this page's own client-side template
+        # placeholders ({{ openModal }}, {{ hasLogo }}, etc). Without this,
+        # HubL silently evaluates our placeholders as undefined HubL
+        # variables and replaces them with empty strings *before* the
+        # browser ever sees them — e.g. onClick="{{ openModal }}" becomes
+        # onClick="" server-side, so the button does nothing and support.js
+        # never gets a real value to work with. {% raw %}/{% endraw %} is
+        # HubL's (Jinja's) own escape hatch for exactly this: everything
+        # between is passed through completely unprocessed.
+        html = "{% raw %}\n" + html + "\n{% endraw %}"
+
         with open(out_path, "w", encoding="utf-8") as f:
             f.write(html)
         print(out_path, len(html), "bytes")
