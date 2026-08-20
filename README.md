@@ -55,3 +55,27 @@ same command if you're previewing inside Claude Code.)
 3. `vercel.json` rewrites `/` to `Split The Farm Optin.dc.html`, so the funnel is live at the
    project's root domain.
 4. Every push to the connected branch redeploys automatically.
+
+## Deploying to HubSpot instead
+
+`Split The Farm Optin.dc.html` / `Watch.dc.html` depend on sibling files (`support.js`,
+`tracking.js`, `image-slot.js`, the `_ds/` folder, `assets/`) via relative paths, which don't
+resolve if you paste just the one HTML file into HubSpot's Design Manager — the page's JS runtime
+never loads, so you get raw unhydrated markup (every conditional state showing at once, broken
+image icons) instead of the real interactive page.
+
+`hubspot/*.hubspot.html` are self-contained builds for exactly that case — everything (fonts, CSS,
+the JS runtime, the logo) is inlined as data URIs, so the single file has zero relative-path
+dependencies and works no matter where it's pasted. Regenerate them after editing the source pages
+or `tracking.js`:
+
+```bash
+python3 build-hubspot.py
+```
+
+Note: the JS runtime files are inlined as `<script src="data:text/javascript;base64,...">`, not as
+literal `<script>...</script>` text — several of them contain the substrings `<!--` and `<script`
+inside their own documentation comments (since their whole job is describing embedded HTML/script
+usage), which trips an obscure HTML-parsing edge case (the "script data double escaped" state) when
+pasted as literal script text and silently corrupts adjacent `<script>` tags. `build-hubspot.py` has
+the full explanation in its docstring.
