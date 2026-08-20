@@ -151,7 +151,17 @@ def main():
         # never gets a real value to work with. {% raw %}/{% endraw %} is
         # HubL's (Jinja's) own escape hatch for exactly this: everything
         # between is passed through completely unprocessed.
-        html = "{% raw %}\n" + html + "\n{% endraw %}"
+        #
+        # Scoped to just the <x-dc>...</x-dc> element — the only place any
+        # {{ }} placeholder actually appears (confirmed: none in <head>, the
+        # inlined CSS, or the trailing <script> logic block). Wrapping the
+        # *entire* ~540KB file in one raw block published with a bare,
+        # detail-free "Error: Error" from HubSpot — a much smaller raw
+        # region avoids whatever that was tripping on, on top of being the
+        # more correct scoping regardless.
+        assert html.count("<x-dc>") == 1 and html.count("</x-dc>") == 1
+        html = html.replace("<x-dc>", "<x-dc>{% raw %}", 1)
+        html = html.replace("</x-dc>", "{% endraw %}</x-dc>", 1)
 
         with open(out_path, "w", encoding="utf-8") as f:
             f.write(html)
