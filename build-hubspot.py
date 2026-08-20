@@ -5,7 +5,8 @@ directly into HubSpot's Design Manager (or anywhere else that can't serve the
 sibling files — support.js, tracking.js, image-slot.js, the _ds/ design-system
 folder, assets/ — at their relative paths).
 
-Inlines:
+Inlines, unless a hosted URL override is given for that page (see
+HOSTED_OVERRIDES below):
   - fonts.css + _ds_bundle.css into one <style> block (Inter woff2 files
     embedded as base64 data URIs; only the 8 weights actually used by these
     pages, not the full design-system font set)
@@ -17,6 +18,13 @@ Inlines:
     silently corrupts/merges adjacent <script> tags. Data-URI src sidesteps
     the entire problem class.)
   - the logo PNG as a base64 data URI
+
+HOSTED_OVERRIDES lets a specific page reference already-hosted copies of
+these files by absolute URL instead of embedding them — much smaller output,
+since the file no longer carries its own copy of the asset. Only applies to
+the four assets listed (support.js/image-slot.js/tracking.js/the logo); the
+design-system CSS + fonts are always inlined since no hosted URL for those
+has been given.
 
 Run this again any time Split The Farm Optin.dc.html / Split The Farm
 Watch.dc.html / tracking.js change, to regenerate hubspot/*.hubspot.html.
@@ -42,6 +50,19 @@ EXT_RANGE = (
     "U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, "
     "U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF"
 )
+
+HS_BASE = "https://43573758.fs1.hubspotusercontent-na1.net/hubfs/43573758/Succession%20Funnel"
+
+# Page (source .dc.html) -> hosted URLs for support.js/image-slot.js/tracking.js/logo.
+# Leave a page out of this dict to fall back to fully embedding everything.
+HOSTED_OVERRIDES = {
+    "Split The Farm Optin.dc.html": {
+        "support.js": f"{HS_BASE}/support.js",
+        "image-slot.js": f"{HS_BASE}/image-slot.js",
+        "tracking.js": f"{HS_BASE}/tracking.js",
+        "logo": f"{HS_BASE}/legacy-farmer-logo.png",
+    },
+}
 
 
 def read_text(p):
@@ -78,10 +99,6 @@ def build_inline_font_css():
 def main():
     inlined_fonts_css = build_inline_font_css()
     ds_bundle_css = read_text(f"{DS}/_ds_bundle.css")
-    logo_data_uri = f"data:image/png;base64,{read_b64('assets/legacy-farmer-logo.png')}"
-    tracking_uri = js_data_uri("tracking.js")
-    support_uri = js_data_uri("support.js")
-    image_slot_uri = js_data_uri("image-slot.js")
 
     link_block = (
         f'<link rel="stylesheet" href="{DS}/fonts/fonts.css">\n'
@@ -91,20 +108,32 @@ def main():
     inline_style = f"<style>\n{inlined_fonts_css}\n{ds_bundle_css}\n</style>"
 
     def build(src_path, out_path):
+        hosted = HOSTED_OVERRIDES.get(src_path, {})
         html = read_text(src_path)
         assert link_block in html, f"link block not found in {src_path}"
         html = html.replace(link_block, inline_style)
-        for src, data_uri in [
-            ("./tracking.js", tracking_uri),
-            ("./support.js", support_uri),
-            ("./image-slot.js", image_slot_uri),
+
+        for local_src, key in [
+            ("./tracking.js", "tracking.js"),
+            ("./support.js", "support.js"),
+            ("./image-slot.js", "image-slot.js"),
         ]:
-            tag = f'<script src="{src}"></script>'
-            if tag in html:
-                html = html.replace(tag, f'<script src="{data_uri}"></script>')
-        html = html.replace(
-            'src="assets/legacy-farmer-logo.png"', f'src="{logo_data_uri}"'
+            tag = f'<script src="{local_src}"></script>'
+            if tag not in html:
+                continue
+            if key in hosted:
+                html = html.replace(tag, f'<script src="{hosted[key]}"></script>')
+            else:
+                html = html.replace(
+                    tag, f'<script src="{js_data_uri(key)}"></script>'
+                )
+
+        logo_url = hosted.get(
+            "logo",
+            f"data:image/png;base64,{read_b64('assets/legacy-farmer-logo.png')}",
         )
+        html = html.replace('src="assets/legacy-farmer-logo.png"', f'src="{logo_url}"')
+
         with open(out_path, "w", encoding="utf-8") as f:
             f.write(html)
         print(out_path, len(html), "bytes")
