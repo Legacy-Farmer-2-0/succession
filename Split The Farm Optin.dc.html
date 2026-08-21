@@ -122,32 +122,27 @@
   <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
     <div style="position:fixed;inset:0;z-index:900;background:rgba(6,9,8,0.78);display:flex;align-items:center;justify-content:center;padding:16px">
       <div style="width:100%;max-width:520px;background:#131815;border:1px solid #2B322D;border-radius:16px;padding:22px 20px 26px;max-height:92vh;overflow-y:auto">
-        <sc-if value="{{ notSubmitted }}" hint-placeholder-val="{{ true }}">
-          <div style="display:flex;flex-direction:column;gap:14px">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px">
-              <div style="font-weight:800;font-size:clamp(21px, 5.4vw, 26px);line-height:1.2;letter-spacing:-0.015em;color:#F3F6F1;text-wrap:pretty">Enter Your Info To Watch The Training</div>
-              <button type="button" onClick="{{ closeModal }}" style="flex:none;width:44px;height:44px;border-radius:12px;border:1px solid #2B322D;background:#171C19;color:#B2BBB3;font-size:17px;cursor:pointer" style-hover="background:#1F2521">✕</button>
-            </div>
-
-            <!--
-              HubSpot form (portalId 43573758 / formId 3bd92e18-1b6f-4522-a7f3-83cfba8e4d1b)
-              is injected into this div by the openModal()/_mountHubspotForm()
-              logic below — see the <script> at the bottom of this file.
-              (Raw <script> tags dropped directly into this template don't
-              reliably execute since this page renders through React, so the
-              embed is loaded imperatively instead of pasted in as markup.)
-            -->
-            <div id="hubspot-form-target"></div>
-
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px">
+            <div style="font-weight:800;font-size:clamp(21px, 5.4vw, 26px);line-height:1.2;letter-spacing:-0.015em;color:#F3F6F1;text-wrap:pretty">Enter Your Info To Watch The Training</div>
+            <button type="button" onClick="{{ closeModal }}" style="flex:none;width:44px;height:44px;border-radius:12px;border:1px solid #2B322D;background:#171C19;color:#B2BBB3;font-size:17px;cursor:pointer" style-hover="background:#1F2521">✕</button>
           </div>
-        </sc-if>
-        <sc-if value="{{ submitted }}" hint-placeholder-val="{{ false }}">
-          <div style="display:flex;flex-direction:column;gap:14px;padding:20px 4px;text-align:center">
-            <div style="font-weight:800;font-size:26px;letter-spacing:-0.015em;color:#F3F6F1">You're in.</div>
-            <div style="font-size:15.5px;line-height:1.5;color:#B2BBB3">Your training is ready.</div>
-            <a href="Split The Farm Watch.dc.html" style="text-decoration:none;height:60px;border-radius:12px;background:#9BD630;color:#15300A;font-family:Inter, sans-serif;font-weight:800;font-size:17px;text-transform:uppercase;letter-spacing:0.01em;display:flex;align-items:center;justify-content:center">Watch The Training</a>
-          </div>
-        </sc-if>
+
+          <!--
+            HubSpot form (portalId 43573758 / formId 3bd92e18-1b6f-4522-a7f3-83cfba8e4d1b)
+            is injected into this div by the openModal()/_mountHubspotForm()
+            logic below — see the <script> at the bottom of this file.
+            (Raw <script> tags dropped directly into this template don't
+            reliably execute since this page renders through React, so the
+            embed is loaded imperatively instead of pasted in as markup.)
+
+            On successful submission there's no "You're in" step anymore —
+            _redirectAfterSubmit() (below) navigates straight to the Watch
+            page after a short delay, so no click is required.
+          -->
+          <div id="hubspot-form-target"></div>
+
+        </div>
       </div>
     </div>
   </sc-if>
@@ -162,8 +157,21 @@ const HUBSPOT_FORM = {
   region: 'na1'
 };
 
+// Where the visitor lands automatically after a successful submission —
+// same relative target the old "Watch The Training" button used to link to.
+const WATCH_PAGE_URL = 'Split The Farm Watch.dc.html';
+
+// A hard navigation immediately on submit can abort any tracking requests
+// that are still in flight in response to the submission (Meta Pixel,
+// Cometly, HubSpot's own) — browsers cancel pending requests on navigate.
+// There's no single endpoint/payload to hand to navigator.sendBeacon for
+// any of these (they're opaque third-party scripts, not calls we make
+// ourselves), so instead we just give everything a brief window to land
+// before leaving the page.
+const REDIRECT_DELAY_MS = 400;
+
 class Component extends DCLogic {
-  state = { modalOpen: false, submitted: false };
+  state = { modalOpen: false };
 
   // Loads HubSpot's forms loader script once (cached on window so a
   // reopened modal, or a hot-swapped logic instance, doesn't add it twice).
@@ -199,19 +207,30 @@ class Component extends DCLogic {
         window.hbspt.forms.create({
           ...HUBSPOT_FORM,
           target: '#hubspot-form-target',
-          onFormSubmitted: () => this.setState({ submitted: true })
+          onFormSubmitted: () => this._redirectAfterSubmit()
         });
       })
       .catch((e) => console.error('[hubspot]', e));
   }
 
+  // Fires once, on whichever signal arrives first (onFormSubmitted above,
+  // or the postMessage fallback in componentDidMount below), and navigates
+  // to the Watch page after REDIRECT_DELAY_MS.
+  _redirectAfterSubmit() {
+    if (this._redirected) return;
+    this._redirected = true;
+    setTimeout(() => {
+      window.location.href = WATCH_PAGE_URL;
+    }, REDIRECT_DELAY_MS);
+  }
+
   componentDidMount() {
     // Belt-and-suspenders: some HubSpot embed configurations only signal
     // submission via this postMessage event rather than onFormSubmitted
-    // above. Either path lands on the same "submitted" state.
+    // above. Either path lands on the same redirect.
     this._onHsMessage = (event) => {
       if (event && event.data && event.data.type === 'hsFormCallback' && event.data.eventName === 'onFormSubmitted') {
-        this.setState({ submitted: true });
+        this._redirectAfterSubmit();
       }
     };
     window.addEventListener('message', this._onHsMessage);
@@ -230,10 +249,8 @@ class Component extends DCLogic {
       headerLogoImg: logoUrl ? React.createElement('img', { src: logoUrl, alt: 'Legacy Farmer', style: { height: (this.props.logoHeight ?? 26) + 'px', width: 'auto', display: 'block', objectFit: 'contain' } }) : null,
       footerLogoImg: logoUrl ? React.createElement('img', { src: logoUrl, alt: 'Legacy Farmer', style: { height: (this.props.footerLogoHeight ?? 26) + 'px', width: 'auto', display: 'block', objectFit: 'contain' } }) : null,
       modalOpen: s.modalOpen,
-      openModal: () => this.setState({ modalOpen: true, submitted: false }, () => this._mountHubspotForm()),
-      closeModal: () => this.setState({ modalOpen: false, submitted: false }),
-      submitted: s.submitted,
-      notSubmitted: !s.submitted
+      openModal: () => this.setState({ modalOpen: true }, () => this._mountHubspotForm()),
+      closeModal: () => this.setState({ modalOpen: false })
     };
   }
 }
