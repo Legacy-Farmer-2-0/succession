@@ -1,5 +1,6 @@
 {
   "rewrites": [
-    { "source": "/", "destination": "/Split The Farm Optin.dc.html" }
+    { "source": "/", "destination": "/Split The Farm Optin.dc.html" },
+    { "source": "/watch", "destination": "/Split The Farm Watch.dc.html" }
   ]
 }
