@@ -17,6 +17,6 @@ fbq('track', 'PageView');
 // ---- Cometly ----
 (function () {
   var s = document.createElement('script');
-  s.src = 'https://js.comet-serve.com/script.js?uid=cbd4d9-4503599666000007-d021d6-s&domains=start.legacyfarmer.com,app.farmermetrics.com,www.legacyfarmer.com,www.farmermetrics.com';
+  s.src = 'https://js.comet-serve.com/script.js?uid=cbd4d9-4503599666000007-d021d6-s&domains=start.legacyfarmer.com,app.farmermetrics.com,www.legacyfarmer.com,www.farmermetrics.com,succession.legacyfarmer.com';
   document.head.appendChild(s);
 })();
