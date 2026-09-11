@@ -20,3 +20,38 @@ fbq('track', 'PageView');
   s.src = 'https://js.comet-serve.com/script.js?uid=cbd4d9-4503599666000007-d021d6-s&domains=start.legacyfarmer.com,app.farmermetrics.com,www.legacyfarmer.com,www.farmermetrics.com,succession.legacyfarmer.com';
   document.head.appendChild(s);
 })();
+
+// ---- Google Tag Manager (GTM-PKPSV9NX) ----
+(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+                                              new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+                    })(window,document,'script','dataLayer','GTM-PKPSV9NX');
+
+// ---- Google Tag Manager (GTM-T5SGCBC) ----
+(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+                                              new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+                    })(window,document,'script','dataLayer','GTM-T5SGCBC');
+
+// ---- Google tag (gtag.js) -- GA4 + Google Ads ----
+(function(){
+  var s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=G-JDK5R4HV70';
+  document.head.appendChild(s);
+})();
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-JDK5R4HV70');
+gtag('config', 'G-4N7281HK5V');
+gtag('config', 'AW-564254529');
+gtag('config', 'AW-16735868721');
+
+// ---- Whop ----
+(function () {
+  var s1 = document.createElement('script'); s1.async = true; s1.src = 'https://t.whop.tw/s.js'; document.head.appendChild(s1);
+  var s2 = document.createElement('script'); s2.async = true; s2.src = 'https://t.whop.tw/sc.js'; document.head.appendChild(s2);
+})();
