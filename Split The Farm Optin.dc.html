@@ -168,7 +168,29 @@ const WATCH_PAGE_URL = 'Split The Farm Watch.dc.html';
 // any of these (they're opaque third-party scripts, not calls we make
 // ourselves), so instead we just give everything a brief window to land
 // before leaving the page.
-const REDIRECT_DELAY_MS = 400;
+const REDIRECT_DELAY_MS = 1500; // was 400 — give Cometly/Meta/HubSpot time to finish before leaving
+
+// ---- Cometly attribution fix ----
+// The HubSpot form renders inside an iframe, so the Cometly pixel on this page
+// can't read the email field. Instead we write the visitor's Cometly session
+// token into a hidden HubSpot field named "comet_token". Zapier then passes it
+// to Cometly with the Lead event so it links to this browser's ad click/visits.
+function setCometToken($form) {
+  try {
+    var form = ($form && $form.jquery) ? $form[0] : $form;
+    if (!form || !form.querySelector) return;
+    var input = form.querySelector('input[name="comet_token"]');
+    if (!input) { console.warn('[cometly] comet_token hidden field not found on form'); return; }
+    if (typeof window.cometToken !== 'function') { console.warn('[cometly] cometToken() not available yet'); return; }
+    var token = window.cometToken();
+    if (!token) return;
+    input.value = token;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  } catch (e) {
+    console.warn('[cometly] could not set comet_token', e);
+  }
+}
 
 class Component extends DCLogic {
   state = { modalOpen: false };
@@ -207,6 +229,11 @@ class Component extends DCLogic {
         window.hbspt.forms.create({
           ...HUBSPOT_FORM,
           target: '#hubspot-form-target',
+          onFormReady: ($form) => {
+            setCometToken($form);
+            setTimeout(() => setCometToken($form), 1500); // retry in case the pixel loaded late
+          },
+          onBeforeFormSubmit: ($form) => setCometToken($form),
           onFormSubmitted: () => this._redirectAfterSubmit()
         });
       })
