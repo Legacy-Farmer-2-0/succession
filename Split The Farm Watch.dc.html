@@ -60,5 +60,26 @@
 </div>
 
 </x-dc>
+<script>
+// LF: pass opt-in first name + phone into the Succession Typeform link
+(function () {
+  var SEL = 'a[href*="typeform.com/to/Sht9K23s"]';
+  function hash() {
+    var lead = {};
+    try { lead = JSON.parse(localStorage.getItem('lf_lead') || '{}'); } catch (e) {}
+    var parts = [];
+    if (lead.first_name) parts.push('first_name=' + encodeURIComponent(lead.first_name));
+    if (lead.phone) parts.push('phone_number=' + encodeURIComponent(lead.phone));
+    return parts.join('&');
+  }
+  function apply(a) { var h = hash(); if (h) a.href = a.href.split('#')[0] + '#' + h; }
+  // Set it on load, and again at click time in case the page re-rendered the button
+  window.addEventListener('load', function () { document.querySelectorAll(SEL).forEach(apply); });
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest && e.target.closest(SEL);
+    if (a) apply(a);
+  }, true);
+})();
+</script>
 </body>
 </html>

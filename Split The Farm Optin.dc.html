@@ -252,7 +252,15 @@ class Component extends DCLogic {
             setCometToken($form);
             setTimeout(() => setCometToken($form), 1500); // retry in case the pixel loaded late
           },
-          onBeforeFormSubmit: ($form) => setCometToken($form),
+        onBeforeFormSubmit: ($form) => {
+  setCometToken($form);
+  // LF: save first name + phone for the Typeform application (hidden fields)
+  try {
+    var form = ($form && $form.jquery) ? $form[0] : $form;
+    var get = function (n) { var el = form && form.querySelector('[name="' + n + '"]'); return el ? el.value.trim() : ''; };
+    localStorage.setItem('lf_lead', JSON.stringify({ first_name: get('firstname'), phone: get('phone') }));
+  } catch (e) {}
+},
           onFormSubmitted: () => this._redirectAfterSubmit()
         });
       })
