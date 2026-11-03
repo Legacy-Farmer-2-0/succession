@@ -2,7 +2,7 @@
 // in the <head>. Keep this the single source of truth for pixel IDs / tracking
 // snippets rather than pasting them into each page individually.
 
-// ---- Meta Pixel (ID 373699973148175) — standard base code ----
+// ---- Meta Pixel (ID 2142486726656901, LF - Succession Pixel) — standard base code ----
 !function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
 n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -11,7 +11,7 @@ n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];
 s.parentNode.insertBefore(t,s)}(window, document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '373699973148175');
+fbq('init', '2142486726656901');
 fbq('track', 'PageView');
 
 // ---- Cometly ----
